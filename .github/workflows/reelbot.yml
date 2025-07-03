@@ -1,28 +1,33 @@
-name: 🤖 AI ReelBot Automation
+name: 🧪 Test: Fetch script + generate voiceover
 
 on:
-  schedule:
-    - cron: '0 5,17 * * *'  # Runs twice daily at 5:00 AM and 5:00 PM UTC (10:30 AM / 10:30 PM IST)
   workflow_dispatch:
 
 jobs:
-  reelbot:
+  test-voiceover:
     runs-on: ubuntu-latest
-
-    env:
-      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-
     steps:
-      - name: 📥 Clone Repository
-        uses: actions/checkout@v4
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: 🐍 Set Up Python
-        uses: actions/setup-python@v5
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: ⚙️ Run AI ReelBot
+      - name: 📦 Install dependencies
         run: |
-          python main.py
+          sudo apt update
+          sudo apt install espeak ffmpeg -y
+          pip install -r requirements.txt
+
+      - name: 🧾 Fetch latest script from Supabase
+        run: |
+          mkdir -p temp
+          python fetch_latest_script.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+      - name: 🗣️ Generate voiceover
+        run: python generate_voiceover.py
