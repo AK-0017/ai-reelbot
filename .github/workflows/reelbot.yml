@@ -1,4 +1,4 @@
-name: 🧪 Test: Fetch script + generate voiceover
+name: 🧪 Test - Fetch script + generate voiceover
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
 jobs:
   test-voiceover:
     runs-on: ubuntu-latest
+
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
