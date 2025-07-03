@@ -1,62 +1,37 @@
 import os
-import requests
+from supabase import create_client
+from datetime import datetime
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 BUCKET_NAME = "scripts"
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("❌ SUPABASE_URL or SUPABASE_KEY environment variable is missing.")
-
-
-HEADERS = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-}
-
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_latest_folder():
-    url = f"{SUPABASE_URL}/storage/v1/object/list/{BUCKET_NAME}?limit=100"
-    res = requests.get(url, headers=HEADERS)
-    try:
-        data = res.json()
-    except Exception as e:
-        raise Exception(f"❌ JSON parsing failed: {e}\nRaw response:\n{res.text}")
+    print(f"📦 Listing folders from bucket: {BUCKET_NAME}")
+    response = supabase.storage.from_(BUCKET_NAME).list("", {"limit": 100})
 
-    if not isinstance(data, list):
-        raise Exception(f"❌ Unexpected Supabase response: {data}")
+    if not isinstance(response, list):
+        raise Exception(f"❌ Unexpected Supabase response: {response}")
 
-    # Extract folder names from file paths like '2025-07-02_20-12-05/script.txt'
-    folders = set()
-    for obj in data:
-        name = obj.get("name", "")
-        if "/" in name:
-            folder = name.split("/")[0]
-            if folder[0].isdigit():
-                folders.add(folder)
-
+    folders = [obj["name"] for obj in response if obj.get("name") and obj["name"][0].isdigit()]
+    folders.sort(reverse=True)
     if not folders:
-        raise Exception("❌ No valid timestamp folders found in Supabase.")
+        raise Exception("❌ No timestamped folders found in bucket.")
+    return folders[0]
 
-    latest_folder = sorted(folders, reverse=True)[0]
-    return latest_folder
+def download_latest_script():
+    folder = get_latest_folder()
+    print(f"📁 Latest folder: {folder}")
+    local_path = f"temp/single_script.txt"
+    remote_path = f"{folder}/single_script.txt"
 
-
-def download_script(folder):
-    files = ["script.txt", "single_script.txt"]
-    os.makedirs("temp", exist_ok=True)
-
-    for filename in files:
-        url = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{folder}/{filename}"
-        res = requests.get(url)
-        if res.status_code == 200:
-            with open(f"temp/{filename}", "wb") as f:
-                f.write(res.content)
-            print(f"✅ Downloaded: {filename}")
-        else:
-            raise Exception(f"❌ Failed to download {filename} | Status code: {res.status_code}")
+    with open(local_path, "wb") as f:
+        data = supabase.storage.from_(BUCKET_NAME).download(remote_path)
+        f.write(data)
+    print(f"✅ Script downloaded to: {local_path}")
 
 if __name__ == "__main__":
-    folder = get_latest_folder()
-    print(f"📁 Latest folder detected: {folder}")
-    download_script(folder)
+    os.makedirs("temp", exist_ok=True)
+    download_latest_script()
