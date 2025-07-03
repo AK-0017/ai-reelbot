@@ -5,6 +5,10 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 BUCKET_NAME = "scripts"
 
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("❌ SUPABASE_URL or SUPABASE_KEY environment variable is missing.")
+
+
 HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
