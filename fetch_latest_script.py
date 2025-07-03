@@ -1,7 +1,7 @@
 import requests
 
 SUPABASE_URL = "https://qtakfohimrxpupoodayr.supabase.co"
-SUPABASE_KEY = "your-api-key"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0YWtmb2hpbXJ4cHVwb29kYXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NjY5MTksImV4cCI6MjA2NzA0MjkxOX0.nyJv5PD1RpLgRsnazt3A76kjkTbgz5EyoNVH1UtcKxg"
 BUCKET_NAME = "scripts"
 
 def get_latest_folder():
