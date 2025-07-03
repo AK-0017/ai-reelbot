@@ -4,5 +4,6 @@ moviepy
 yt-dlp
 supabase
 TTS==0.22.0
-torch==2.0.1
+python-dotenv
+torch==2.1.2
 numpy
