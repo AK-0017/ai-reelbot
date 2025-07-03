@@ -3,3 +3,6 @@ gtts
 moviepy
 yt-dlp
 supabase
+TTS==0.22.0
+torch==2.0.1
+numpy
