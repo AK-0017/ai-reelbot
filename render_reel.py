@@ -3,7 +3,7 @@ import os
 import numpy as np
 from moviepy.editor import (
     VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip,
-    ColorClip, ImageClipm CompositeAudioClip
+    ColorClip, ImageClip, CompositeAudioClip
 )
 from moviepy.video.fx.all import crop
 
