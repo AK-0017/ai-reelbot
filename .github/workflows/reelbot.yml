@@ -32,3 +32,9 @@ jobs:
 
       - name: 🗣️ Generate voiceover
         run: python generate_voiceover.py
+
+      - name: 🎥 Fetch video + audio assets
+        run: python fetch_assets.py
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
