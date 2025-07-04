@@ -22,10 +22,10 @@ jobs:
           sudo apt install espeak ffmpeg -y
           pip install -r requirements.txt
           python -m pip install --upgrade pip
-
-      - name: Verify Pillow version
-        run: python -c "import PIL; print('✅ Pillow version:', PIL.__version__)"
-      
+        
+      - name: ✨ Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+  
       - name: 🧾 Fetch latest script from Supabase
         run: |
           mkdir -p temp
@@ -45,7 +45,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_MUSIC_BASE_URL: ${{ secrets.SUPABASE_MUSIC_BASE_URL }}
 
-      - name: Testing Reel Generation
+      - name: 📹 Testing Reel Generation
         run: python render_reel.py
         
         
