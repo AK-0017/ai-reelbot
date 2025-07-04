@@ -43,7 +43,7 @@ def download_latest_script():
     
     # Inside download_latest_script()
     with open("temp/session_folder.txt", "w") as f:
-    f.write(folder)
+         f.write(folder)
 
 
 
