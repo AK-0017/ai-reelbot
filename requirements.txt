@@ -7,3 +7,4 @@ TTS==0.22.0
 python-dotenv
 torch==2.1.2
 numpy
+Pillow==9.5.0
