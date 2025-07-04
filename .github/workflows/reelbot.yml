@@ -38,3 +38,7 @@ jobs:
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
 
+      - name: Testing Reel Generation
+        run: python render_reel.py
+        
+
