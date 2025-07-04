@@ -1,18 +1,17 @@
 import os
 import random
 import requests
-import hashlib
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 # === CONFIG ===
 PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY")
+SUPABASE_MUSIC_BASE_URL = os.environ.get("SUPABASE_MUSIC_BASE_URL")  # Format: https://xxx.supabase.co/storage/v1/object/public/background-music
 VIDEO_QUERY = [
     "futuristic", "technology", "cyberpunk", "ai", "data", "innovation",
     "digital", "tech", "robotics", "smart home", "wearable tech", "5G", "quantum computing"
 ]
 VIDEO_COUNT = 5
-SUPABASE_BUCKET_URL = "https://<your-supabase-project-ref>.supabase.co/storage/v1/object/public/background-music"
-AVAILABLE_TRACKS = ["1.mp3", "2.mp3", "3.mp3", "4.mp3", "5.mp3"]
+MUSIC_OPTIONS = ["1.mp3", "2.mp3", "3.mp3", "4.mp3", "5.mp3"]
 
 
 def fetch_pexels_videos(download_dir="temp"):
@@ -63,16 +62,20 @@ def merge_videos(clips, output_path):
     print(f"✅ Final background video saved: {output_path}")
 
 
-def fetch_random_music(output_path):
-    print("🎵 Fetching a random music track from Supabase...")
-    random_track = random.choice(AVAILABLE_TRACKS)
-    track_url = f"{SUPABASE_BUCKET_URL}/{random_track}"
+def fetch_random_music(output_path="temp/music.mp3"):
+    print("🎵 Fetching background music from Supabase...")
+
+    music_file = random.choice(MUSIC_OPTIONS)
+    track_url = f"{SUPABASE_MUSIC_BASE_URL}/{music_file}"
 
     try:
         response = requests.get(track_url)
         response.raise_for_status()
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "wb") as f:
             f.write(response.content)
+
         print(f"✅ Music downloaded and saved to: {output_path}")
     except Exception as e:
         raise Exception(f"❌ Failed to fetch background music: {e}")
@@ -80,6 +83,7 @@ def fetch_random_music(output_path):
 
 if __name__ == "__main__":
     os.makedirs("temp", exist_ok=True)
+
     video_clips = fetch_pexels_videos(download_dir="temp")
     merge_videos(video_clips, output_path="temp/background.mp4")
     fetch_random_music(output_path="temp/music.mp3")
