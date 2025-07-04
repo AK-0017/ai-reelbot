@@ -63,6 +63,7 @@ def merge_videos(clips, output_path):
 
 
 def fetch_random_music(output_path="temp/music.mp3"):
+    print(f"🧪 DEBUG: SUPABASE_MUSIC_BASE_URL = {SUPABASE_MUSIC_BASE_URL}")
     print("🎵 Fetching background music from Supabase...")
 
     music_file = random.choice(MUSIC_OPTIONS)
