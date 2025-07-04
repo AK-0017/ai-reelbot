@@ -1,4 +1,3 @@
-# render_reel.py ✅
 import os
 import numpy as np
 from moviepy.editor import (
@@ -6,9 +5,10 @@ from moviepy.editor import (
     ColorClip, ImageClip, CompositeAudioClip
 )
 from moviepy.video.fx.all import crop
+from moviepy.video.VideoClip import VideoClip
 
 # === CONFIG ===
-DURATION = 30
+MAX_DURATION = 30
 SCRIPT_PATH = "temp/single_script.txt"
 VOICE_PATH = "temp/voiceover.mp3"
 MUSIC_PATH = "temp/music.mp3"
@@ -18,25 +18,31 @@ LOGO_PATH = "assets/logo.png"
 
 # === Load Script ===
 with open(SCRIPT_PATH, "r", encoding="utf-8") as f:
-    script = f.read().strip().split("\n")
-    script = [line for line in script if line.strip()]
+    script = [line.strip() for line in f if line.strip()]
 
-# === Load Audio ===
+# === Load Clips ===
 voice = AudioFileClip(VOICE_PATH)
-music = AudioFileClip(MUSIC_PATH).volumex(0.2)  # lower bg music
-audio = voice.set_start(0).audio_fadein(1).fx(lambda a: a.volumex(1.0)).audio_fadeout(1)
-audio = audio.set_duration(DURATION)
-final_audio = CompositeAudioClip([music.volumex(0.2), audio])
+music = AudioFileClip(MUSIC_PATH)
+bg = VideoFileClip(BACKGROUND_PATH)
 
-# === Background Video ===
-bg = VideoFileClip(BACKGROUND_PATH).subclip(0, DURATION)
+# === Duration sync ===
+final_duration = min(MAX_DURATION, voice.duration, music.duration, bg.duration)
+print(f"🎯 Final reel duration: {final_duration:.2f} seconds")
+
+# === Prepare audio ===
+voice = voice.subclip(0, final_duration).audio_fadein(1).audio_fadeout(1)
+music = music.subclip(0, final_duration).volumex(0.2).audio_fadein(1).audio_fadeout(1)
+final_audio = CompositeAudioClip([music, voice])
+
+# === Background video with zoom ===
+bg = bg.subclip(0, final_duration)
 bg = crop(bg.resize(width=720), width=720, height=1280)
-bg = bg.resize(lambda t: 1 + 0.02 * t)  # slow zoom
+bg = bg.resize(lambda t: 1 + 0.02 * t)  # zoom effect
 
-# === Glass Panel Overlay ===
-glass = ColorClip((720, 460), (0, 0, 0)).set_opacity(0.4).set_duration(DURATION).set_position(("center", 400))
+# === Glass panel overlay ===
+glass = ColorClip((720, 460), (0, 0, 0)).set_opacity(0.4).set_duration(final_duration).set_position(("center", 400))
 
-# === Text Animations ===
+# === Animated text ===
 def anim_text(txt, y, start, size=48, dur=4):
     return (
         TextClip(txt, fontsize=size, color="white", font="Arial-Bold", method="caption", size=(660, None))
@@ -46,41 +52,40 @@ def anim_text(txt, y, start, size=48, dur=4):
     )
 
 texts = []
+start_time = 1
 y = 410
-start = 1
 for i, line in enumerate(script[:6]):
-    texts.append(anim_text(line, y + i*60, start + i*2, size=52 if i == 0 else 48))
+    texts.append(anim_text(line, y + i * 60, start_time + i * 2, size=52 if i == 0 else 48))
 
-# === Follow CTA ===
-cta = anim_text("📲 Follow for daily AI updates!", 1180, 26, size=42)
+# === CTA ===
+cta = anim_text("📲 Follow for daily AI updates!", 1180, final_duration - 4, size=42)
 texts.append(cta)
 
-# === Logo Watermark (Optional) ===
+# === Logo watermark ===
 logo = None
 if os.path.exists(LOGO_PATH):
     logo = (
         ImageClip(LOGO_PATH)
-        .set_duration(DURATION)
+        .set_duration(final_duration)
         .resize(width=80)
         .set_position(("right", "top"))
         .margin(right=15, top=15, opacity=0)
     )
 
-# === Progress Bar ===
+# === Progress bar ===
 def bar_frame(t):
-    width = max(1, int(720 * t / DURATION))
+    width = max(1, int(720 * t / final_duration))
     bar = np.zeros((5, 720, 3), dtype=np.uint8)
     bar[:, :width] = [255, 255, 255]
     return bar
 
-from moviepy.video.VideoClip import VideoClip
-bar = VideoClip(make_frame=bar_frame, duration=DURATION).set_position(("center", 0))
+bar = VideoClip(make_frame=bar_frame, duration=final_duration).set_position(("center", 0))
 
-# === Compose Final Reel ===
+# === Compose all layers ===
 layers = [bg, glass, bar] + texts
 if logo: layers.append(logo)
 
-final = CompositeVideoClip(layers, size=(720, 1280)).set_audio(final_audio).set_duration(DURATION)
+final = CompositeVideoClip(layers, size=(720, 1280)).set_audio(final_audio).set_duration(final_duration)
 final.write_videofile(OUTPUT_PATH, fps=24, codec="libx264", audio_codec="aac")
 
 print(f"✅ Final reel exported to: {OUTPUT_PATH}")
