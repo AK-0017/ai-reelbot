@@ -1,37 +1,27 @@
 import os
 import random
 import requests
-import subprocess
 import hashlib
-import uuid
-from supabase import create_client
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 # === CONFIG ===
-PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY")  # Use GitHub secret
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-BUCKET_NAME = "background-music"
-MUSIC_FILENAMES = ["1.mp3", "2.mp3", "3.mp3", "4.mp3", "5.mp3"]
+PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY")
 VIDEO_QUERY = [
     "futuristic", "technology", "cyberpunk", "ai", "data", "innovation",
-    "digital", "tech", "smart", "robotics", "gadgets", "virtual reality",
-    "augmented reality", "blockchain", "internet of things", "machine learning",
-    "artificial intelligence", "smart home", "wearable tech", "5G", "quantum computing"
+    "digital", "tech", "robotics", "smart home", "wearable tech", "5G", "quantum computing"
 ]
 VIDEO_COUNT = 5
-
-# === INIT ===
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-os.makedirs("temp", exist_ok=True)
+SUPABASE_BUCKET_URL = "https://<your-supabase-project-ref>.supabase.co/storage/v1/object/public/background-music"
+AVAILABLE_TRACKS = ["1.mp3", "2.mp3", "3.mp3", "4.mp3", "5.mp3"]
 
 
-def fetch_pexels_videos():
+def fetch_pexels_videos(download_dir="temp"):
     print("🎥 Fetching tech-style vertical videos from Pexels...")
     headers = {"Authorization": PEXELS_API_KEY}
-    all_clips = []
+    os.makedirs(download_dir, exist_ok=True)
+    downloaded = []
 
-    for _ in range(20):  # Try up to 20 videos
+    for attempt in range(10):
         query = random.choice(VIDEO_QUERY)
         try:
             res = requests.get(
@@ -40,58 +30,56 @@ def fetch_pexels_videos():
             )
             res.raise_for_status()
             data = res.json()
-
             for vid in data.get("videos", []):
-                video_url = vid["video_files"][0]["link"]
-                temp_path = f"temp/{uuid.uuid4()}.mp4"
+                url = vid["video_files"][0]["link"]
+                index = len(downloaded)
+                local_path = os.path.join(download_dir, f"video_{index}.mp4")
 
-                # Download video locally first
-                with open(temp_path, "wb") as f:
-                    f.write(requests.get(video_url).content)
+                # Download video to file
+                video_bytes = requests.get(url).content
+                with open(local_path, "wb") as f:
+                    f.write(video_bytes)
 
-                # Then load locally into MoviePy
-                clip = (
-                    VideoFileClip(temp_path)
-                    .resize(height=1080)
-                    .crop(width=608, x_center=304)
-                    .subclip(0, min(5, VideoFileClip(temp_path).duration))
-                )
-                all_clips.append(clip)
+                # Load + preprocess clip
+                clip = VideoFileClip(local_path)
+                trimmed = clip.resize(height=1080).crop(width=608, x_center=304).subclip(0, min(5, clip.duration))
+                downloaded.append(trimmed)
 
-                if len(all_clips) >= VIDEO_COUNT:
-                    break
+                if len(downloaded) >= VIDEO_COUNT:
+                    return downloaded
+
         except Exception as e:
             print(f"⚠️ Failed to fetch or process video: {e}")
 
-        if len(all_clips) >= VIDEO_COUNT:
-            break
-
-    return all_clips
+    return downloaded
 
 
 def merge_videos(clips, output_path):
-    print("🔗 Merging and resizing clips...")
     if not clips:
         raise Exception("❌ Not enough video clips to merge.")
+    print("🔗 Merging and rendering video clips...")
     final = concatenate_videoclips(clips, method="compose")
-    final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac")
-    print(f"✅ Final merged video saved: {output_path}")
+    final.write_videofile(output_path, fps=30, audio=False)
+    print(f"✅ Final background video saved: {output_path}")
 
 
 def fetch_random_music(output_path):
-    print("🎵 Fetching random background music from Supabase...")
+    print("🎵 Fetching a random music track from Supabase...")
+    random_track = random.choice(AVAILABLE_TRACKS)
+    track_url = f"{SUPABASE_BUCKET_URL}/{random_track}"
 
-    filename = random.choice(MUSIC_FILENAMES)
     try:
-        file_data = supabase.storage.from_(BUCKET_NAME).download(filename)
+        response = requests.get(track_url)
+        response.raise_for_status()
         with open(output_path, "wb") as f:
-            f.write(file_data)
+            f.write(response.content)
         print(f"✅ Music downloaded and saved to: {output_path}")
     except Exception as e:
-        print(f"❌ Failed to download music '{filename}' from Supabase: {e}")
+        raise Exception(f"❌ Failed to fetch background music: {e}")
 
 
 if __name__ == "__main__":
-    video_clips = fetch_pexels_videos()
+    os.makedirs("temp", exist_ok=True)
+    video_clips = fetch_pexels_videos(download_dir="temp")
     merge_videos(video_clips, output_path="temp/background.mp4")
     fetch_random_music(output_path="temp/music.mp3")
