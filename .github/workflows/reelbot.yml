@@ -1,4 +1,4 @@
-name: 🧪 Test - Fetch script + generate voiceover
+name: 🧪 Test - The WorkFlow - InstaBot
 
 on:
   workflow_dispatch:
