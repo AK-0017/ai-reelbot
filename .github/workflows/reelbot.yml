@@ -37,12 +37,11 @@ jobs:
         run: python auto_fetch_assets.py
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
       - name: Testing Reel Generation
         run: python render_reel.py
-        env:
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        
         
 
