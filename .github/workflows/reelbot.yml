@@ -23,8 +23,13 @@ jobs:
           pip install -r requirements.txt
           python -m pip install --upgrade pip
         
-      - name: ✨ Install ImageMagick
+      - name: 🧰 Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: 🛡️ Patch ImageMagick policy
+        run: |
+          sudo sed -i 's/rights="none"/rights="read|write"/g' /etc/ImageMagick-6/policy.xml || true
+
   
       - name: 🧾 Fetch latest script from Supabase
         run: |
