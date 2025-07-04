@@ -1,35 +1,44 @@
 import os
-import requests
+from supabase import create_client
+from session import get_current_session_folder
 
+# === ENV from GitHub Secrets ===
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-VIDEO_PATH = "temp/final_reel.mp4"
-BUCKET_NAME = "final-reels"
-OBJECT_NAME = os.path.basename(VIDEO_PATH)
+BUCKET_NAME = "reels"
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise Exception("❌ Missing SUPABASE_URL or SUPABASE_KEY in environment.")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-if not os.path.exists(VIDEO_PATH):
-    raise Exception(f"❌ Final video not found at {VIDEO_PATH}")
+# === Load current timestamp folder from session ===
+folder = get_current_session_folder()
+if not folder:
+    raise Exception("❌ Timestamp session folder not found. Did you run fetch_latest_script.py first?")
 
-print("☁️ Uploading final reel to Supabase...")
-
-headers = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "video/mp4",
-    "x-upsert": "true"
+# === Files to upload ===
+FILES = {
+    "final_reel.mp4": "temp/final_reel.mp4",
+    "background.mp4": "temp/background.mp4",
+    "music.mp3": "temp/music.mp3",
+    "voiceover.mp3": "temp/voiceover.mp3",
 }
 
-with open(VIDEO_PATH, "rb") as f:
-    data = f.read()
+print("☁️ Uploading final reel and assets to Supabase...")
 
-upload_url = f"{SUPABASE_URL}/storage/v1/object/{BUCKET_NAME}/{OBJECT_NAME}"
-res = requests.put(upload_url, headers=headers, data=data)
+for name, path in FILES.items():
+    if not os.path.exists(path):
+        print(f"⚠️ Skipping missing file: {path}")
+        continue
 
-if res.status_code == 200:
-    public_url = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{OBJECT_NAME}"
-    print(f"✅ Uploaded successfully. Public URL:\n{public_url}")
-else:
-    print(f"❌ Upload failed with status {res.status_code}:\n{res.text}")
+    storage_path = f"{folder}/{name}"
+    with open(path, "rb") as f:
+        res = supabase.storage.from_(BUCKET_NAME).upload(
+            storage_path, f, {"content-type": "video/mp4" if name.endswith(".mp4") else "audio/mpeg"}
+        )
+    
+    if hasattr(res, "status_code") and res.status_code >= 400:
+        print(f"❌ Failed to upload {name} → Status: {res.status_code}")
+        print(res.json())
+    else:
+        print(f"✅ Uploaded: {storage_path}")
+
+print("🎉 All available files uploaded to Supabase.")
