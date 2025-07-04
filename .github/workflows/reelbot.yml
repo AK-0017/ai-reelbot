@@ -43,6 +43,7 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_MUSIC_BASE_URL: ${{ secrets.SUPABASE_MUSIC_BASE_URL }}
 
       - name: Testing Reel Generation
         run: python render_reel.py
