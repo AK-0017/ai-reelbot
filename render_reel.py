@@ -3,7 +3,7 @@ import os
 import numpy as np
 from moviepy.editor import (
     VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip,
-    ColorClip, ImageClip
+    ColorClip, ImageClipm CompositeAudioClip
 )
 from moviepy.video.fx.all import crop
 
@@ -26,7 +26,7 @@ voice = AudioFileClip(VOICE_PATH)
 music = AudioFileClip(MUSIC_PATH).volumex(0.2)  # lower bg music
 audio = voice.set_start(0).audio_fadein(1).fx(lambda a: a.volumex(1.0)).audio_fadeout(1)
 audio = audio.set_duration(DURATION)
-final_audio = audio.set_audio(music)
+final_audio = CompositeAudioClip([music.volumex(0.2), audio])
 
 # === Background Video ===
 bg = VideoFileClip(BACKGROUND_PATH).subclip(0, DURATION)
