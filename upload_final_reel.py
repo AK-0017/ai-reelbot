@@ -3,7 +3,7 @@ import requests
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-VIDEO_PATH = "temp/final_video.mp4"
+VIDEO_PATH = "temp/final_reel.mp4"
 BUCKET_NAME = "final-reels"
 OBJECT_NAME = os.path.basename(VIDEO_PATH)
 
