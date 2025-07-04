@@ -40,6 +40,11 @@ def download_latest_script():
         f.write(res)
 
     print("✅ Script downloaded to: temp/single_script.txt")
+    
+    # Inside download_latest_script()
+    with open("temp/session_folder.txt", "w") as f:
+    f.write(folder)
+
 
 
 if __name__ == "__main__":
