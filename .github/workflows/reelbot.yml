@@ -52,6 +52,12 @@ jobs:
 
       - name: 📹 Testing Reel Generation
         run: python render_reel.py
-        
-        
 
+
+      - name: ☁️ Upload final reel to Supabase
+        run: python upload_final_reel.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+          
