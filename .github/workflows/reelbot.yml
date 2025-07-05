@@ -52,9 +52,6 @@ jobs:
       - name: ✍️ Generate Captions with Timings
         run: python captions_generator.py
 
-      - name: 📽️ Render Final Reel
-        run: python render_reel.py
-
       - name: ☁️ Upload Final Reel to Supabase
         run: python upload_final_reel.py
         env:
