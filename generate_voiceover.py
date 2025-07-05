@@ -1,9 +1,12 @@
 # generate_voiceover.py ✅ XTTS v2 with reference voice and chunking
 import os
+os.environ["COQUI_TOS_AGREED"] = "1"  # ✅ Bypass CPML agreement prompt
+
 import json
 import time
 import nltk
 from TTS.api import TTS
+
 
 nltk.download("punkt")
 
