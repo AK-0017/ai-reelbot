@@ -3,7 +3,7 @@ import os
 import json
 from moviepy.editor import (
     VideoFileClip, TextClip, CompositeVideoClip,
-    AudioFileClip, ColorClip, concatenate_videoclips
+    AudioFileClip, ColorClip
 )
 from moviepy.video.fx import fadein, fadeout
 
@@ -29,11 +29,9 @@ MAX_WORDS_PER_LINE = 8
 PROGRESS_HEIGHT = 8
 PROGRESS_COLOR = (255, 255, 255)
 
-
 def load_metadata(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-
 
 def format_text(text):
     words = text.strip().split()
@@ -41,7 +39,6 @@ def format_text(text):
         return text
     midpoint = len(words) // 2
     return " ".join(words[:midpoint]) + "\n" + " ".join(words[midpoint:])
-
 
 def create_caption_clip(text, start, duration, video_size):
     formatted_text = format_text(text)
@@ -64,7 +61,6 @@ def create_caption_clip(text, start, duration, video_size):
 
     return caption
 
-
 def create_background_overlay(start, duration, video_size):
     overlay = ColorClip(
         size=(video_size[0], FONT_SIZE * 2),
@@ -76,16 +72,18 @@ def create_background_overlay(start, duration, video_size):
 
     return overlay
 
-
 def create_progress_bar(duration, video_size):
     bar = ColorClip(
         size=(1, PROGRESS_HEIGHT),
         color=PROGRESS_COLOR
     ).set_position(("left", video_size[1] - PROGRESS_HEIGHT))
 
-    animated_bar = bar.resize(lambda t: (int(video_size[0] * (t / duration)), PROGRESS_HEIGHT))
-    return animated_bar.set_duration(duration)
+    # ✅ FIX: Ensure width is never zero
+    animated_bar = bar.resize(
+        lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT)
+    )
 
+    return animated_bar.set_duration(duration)
 
 def generate_all_layers(metadata, video_size, total_duration):
     caption_clips = []
@@ -106,7 +104,6 @@ def generate_all_layers(metadata, video_size, total_duration):
     progress = create_progress_bar(total_duration, video_size)
     return caption_clips + overlays + [progress]
 
-
 def render_video():
     print("🎬 Rendering high-quality final reel with animations and progress bar...")
 
@@ -119,14 +116,14 @@ def render_video():
     audio = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
-    # Trim video to voiceover length
+    # Trim video to match voiceover duration
     video = video.set_duration(audio.duration)
     overlays = generate_all_layers(metadata, video.size, audio.duration)
 
     final = CompositeVideoClip([video] + overlays).set_audio(audio)
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
-    print(f"✅ Final reel saved: {OUTPUT_VIDEO}")
 
+    print(f"✅ Final reel saved: {OUTPUT_VIDEO}")
 
 if __name__ == "__main__":
     render_video()
