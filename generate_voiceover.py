@@ -1,5 +1,7 @@
-# generate_voiceover.py ✅ (XTTS v2 Upgrade)
+# generate_voiceover.py ✅ (XTTS v2 + ToS Auto-Confirm)
 import os
+os.environ["COQUI_TOS_AGREED"] = "1"  # 👈 Auto-confirm Coqui ToS
+
 from TTS.api import TTS
 
 INPUT_FILE = "temp/single_script.txt"
