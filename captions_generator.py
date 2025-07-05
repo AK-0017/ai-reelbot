@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 ULTIMATE REEL EDITION v3 — Solid Font + Cinematic Effects
+# captions_generator.py 🎬 ULTIMATE REEL EDITION v4 — Split Captions + Sentence Voiceover
 import os
 import json
 from moviepy.editor import (
@@ -14,7 +14,7 @@ INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
 
 # === Caption Style ===
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"  # ✅ More solid font
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_SIZE = 50
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
@@ -24,7 +24,7 @@ MAX_WORDS_PER_LINE = 6
 CAPTION_FADE_DURATION = 0.3
 CAPTION_SCALE_START = 0.95
 CAPTION_SCALE_END = 1.0
-CAPTION_CENTER_HEIGHT = 0.55  # Position captions near middle
+CAPTION_CENTER_HEIGHT = 0.55
 
 # === Overlay & Background ===
 BACKGROUND_OPACITY = 0.4
@@ -41,19 +41,14 @@ def load_metadata(path):
         return json.load(f)
 
 
-def format_text(text):
+def split_text_into_chunks(text, max_words=6):
     words = text.strip().split()
-    if len(words) <= MAX_WORDS_PER_LINE:
-        return text
-    midpoint = len(words) // 2
-    return " ".join(words[:midpoint]) + "\n" + " ".join(words[midpoint:])
+    return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)]
 
 
 def create_caption_clip(text, start, duration, video_size):
-    formatted_text = format_text(text)
-
     caption = TextClip(
-        formatted_text,
+        text,
         fontsize=FONT_SIZE,
         font=FONT_PATH,
         color=TEXT_COLOR,
@@ -110,11 +105,16 @@ def generate_all_layers(metadata, video_size, total_duration):
         end = chunk["end"]
         duration = max(0.5, end - start)
 
-        caption = create_caption_clip(text, start, duration, video_size)
-        bg = create_background_box(start, duration, video_size)
+        sub_chunks = split_text_into_chunks(text, MAX_WORDS_PER_LINE)
+        per_chunk_duration = duration / len(sub_chunks)
 
-        caption_clips.append(caption)
-        overlays.append(bg)
+        for i, part in enumerate(sub_chunks):
+            sub_start = start + i * per_chunk_duration
+            sub_caption = create_caption_clip(part, sub_start, per_chunk_duration, video_size)
+            bg = create_background_box(sub_start, per_chunk_duration, video_size)
+
+            caption_clips.append(sub_caption)
+            overlays.append(bg)
 
     progress = create_progress_bar(total_duration, video_size)
     gradient = create_gradient_overlay(video_size, total_duration)
@@ -123,7 +123,7 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering ULTIMATE REEL v3 — styled & chunk-synced...")
+    print("🎬 Rendering ULTIMATE REEL v4 — smooth voice + smart captions...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError(f"❌ Background video missing: {INPUT_VIDEO}")
