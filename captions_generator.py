@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 ULTIMATE REEL EDITION BY ChatGPT
+# captions_generator.py 🎬 ULTIMATE REEL EDITION v2 — Chunk Synced + Cinematic
 import os
 import json
 from moviepy.editor import (
@@ -6,7 +6,6 @@ from moviepy.editor import (
     AudioFileClip, ColorClip
 )
 from moviepy.video.fx import fadein, fadeout, resize
-from moviepy.video.tools.drawing import color_gradient
 
 # === File Paths ===
 CHUNKS_METADATA = "temp/voiceover_metadata.json"
@@ -14,23 +13,26 @@ VOICEOVER_FILE = "temp/voiceover.mp3"
 INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
 
-# === Caption Style Settings ===
+# === Caption Style ===
 FONT = "Arial-Bold"
 FONT_SIZE = 48
-CAPTION_WIDTH_RATIO = 0.85
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
 STROKE_WIDTH = 2
-FADE_DURATION = 0.3
+CAPTION_WIDTH_RATIO = 0.85
+MAX_WORDS_PER_LINE = 6
+CAPTION_FADE_DURATION = 0.3
+CAPTION_SCALE_START = 0.95
+CAPTION_SCALE_END = 1.0
+CAPTION_CENTER_HEIGHT = 0.55  # Position captions near middle
+
+# === Overlay & Background ===
 BACKGROUND_OPACITY = 0.4
-MAX_WORDS_PER_LINE = 8
+GRADIENT_OPACITY = 0.2
+BACKGROUND_HEIGHT = FONT_SIZE * 2
 
-# === Animation Settings ===
-SCALE_START = 0.92  # Zoom-in animation
-SCALE_END = 1.0
-
-# === Progress Bar Settings ===
-PROGRESS_HEIGHT = 10
+# === Progress Bar ===
+PROGRESS_HEIGHT = 8
 PROGRESS_COLOR = (255, 255, 255)
 
 
@@ -38,12 +40,14 @@ def load_metadata(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def format_text(text):
     words = text.strip().split()
     if len(words) <= MAX_WORDS_PER_LINE:
         return text
     midpoint = len(words) // 2
     return " ".join(words[:midpoint]) + "\n" + " ".join(words[midpoint:])
+
 
 def create_caption_clip(text, start, duration, video_size):
     formatted_text = format_text(text)
@@ -59,24 +63,28 @@ def create_caption_clip(text, start, duration, video_size):
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), None)
     )
 
-    # Start small and scale up
-    caption = caption.set_position("center").set_start(start).set_duration(duration)
-    caption = caption.fx(resize.resize, SCALE_START).fx(resize.resize, lambda t: SCALE_START + (SCALE_END - SCALE_START) * min(t / duration, 1))
-    caption = fadein.fadein(caption, FADE_DURATION)
-    caption = fadeout.fadeout(caption, FADE_DURATION)
+    # Center vertically around center height
+    y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - caption.h // 2
+
+    caption = caption.set_position(("center", y_pos)).set_start(start).set_duration(duration)
+    caption = caption.fx(resize.resize, CAPTION_SCALE_START).fx(
+        resize.resize, lambda t: CAPTION_SCALE_START + (CAPTION_SCALE_END - CAPTION_SCALE_START) * min(t / duration, 1)
+    )
+    caption = fadein.fadein(caption, CAPTION_FADE_DURATION)
+    caption = fadeout.fadeout(caption, CAPTION_FADE_DURATION)
 
     return caption
 
-def create_background_overlay(start, duration, video_size):
-    overlay = ColorClip(
-        size=(int(video_size[0] * CAPTION_WIDTH_RATIO), FONT_SIZE * 2),
+
+def create_background_box(start, duration, video_size):
+    box = ColorClip(
+        size=(int(video_size[0] * CAPTION_WIDTH_RATIO), BACKGROUND_HEIGHT),
         color=(0, 0, 0)
     ).set_opacity(BACKGROUND_OPACITY)
 
-    overlay = overlay.set_position("center")
-    overlay = overlay.set_start(start).set_duration(duration)
+    y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - BACKGROUND_HEIGHT // 2
+    return box.set_position(("center", y_pos)).set_start(start).set_duration(duration)
 
-    return overlay
 
 def create_progress_bar(duration, video_size):
     bar = ColorClip(
@@ -85,15 +93,13 @@ def create_progress_bar(duration, video_size):
     ).set_position(("left", video_size[1] - PROGRESS_HEIGHT))
 
     animated_bar = bar.resize(lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT))
-
     return animated_bar.set_duration(duration)
 
-def generate_gradient_overlay(video_size, duration):
-    gradient = ColorClip(
-        size=video_size,
-        color=(0, 0, 0)
-    ).set_opacity(0.2)
+
+def create_gradient_overlay(video_size, duration):
+    gradient = ColorClip(size=video_size, color=(0, 0, 0)).set_opacity(GRADIENT_OPACITY)
     return gradient.set_duration(duration)
+
 
 def generate_all_layers(metadata, video_size, total_duration):
     caption_clips = []
@@ -105,35 +111,40 @@ def generate_all_layers(metadata, video_size, total_duration):
         end = chunk["end"]
         duration = max(0.5, end - start)
 
-        caption_clip = create_caption_clip(text, start, duration, video_size)
-        bg_overlay = create_background_overlay(start, duration, video_size)
+        caption = create_caption_clip(text, start, duration, video_size)
+        bg = create_background_box(start, duration, video_size)
 
-        caption_clips.append(caption_clip)
-        overlays.append(bg_overlay)
+        caption_clips.append(caption)
+        overlays.append(bg)
 
     progress = create_progress_bar(total_duration, video_size)
-    gradient_layer = generate_gradient_overlay(video_size, total_duration)
-    return caption_clips + overlays + [progress, gradient_layer]
+    gradient = create_gradient_overlay(video_size, total_duration)
+
+    return caption_clips + overlays + [progress, gradient]
+
 
 def render_video():
-    print("🎬 Rendering ChatGPT-Ultimate Reel with cinematic edits...")
+    print("🎬 Rendering ULTIMATE REEL with synced captions, zoom & overlays...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError(f"❌ Background video missing: {INPUT_VIDEO}")
     if not os.path.exists(VOICEOVER_FILE):
-        raise FileNotFoundError(f"❌ Voiceover audio missing: {VOICEOVER_FILE}")
+        raise FileNotFoundError(f"❌ Voiceover missing: {VOICEOVER_FILE}")
+    if not os.path.exists(CHUNKS_METADATA):
+        raise FileNotFoundError(f"❌ Metadata missing: {CHUNKS_METADATA}")
 
     video = VideoFileClip(INPUT_VIDEO)
     audio = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
     video = video.set_duration(audio.duration)
-    overlays = generate_all_layers(metadata, video.size, audio.duration)
+    layers = generate_all_layers(metadata, video.size, audio.duration)
 
-    final = CompositeVideoClip([video] + overlays).set_audio(audio)
+    final = CompositeVideoClip([video] + layers).set_audio(audio)
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
 
     print(f"✅ Final cinematic reel saved: {OUTPUT_VIDEO}")
+
 
 if __name__ == "__main__":
     render_video()
