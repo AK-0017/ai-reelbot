@@ -20,17 +20,16 @@ jobs:
         run: |
           sudo apt update
           sudo apt install espeak ffmpeg -y
+          pip install --upgrade pip
           pip install -r requirements.txt
-          python -m pip install --upgrade pip
-        
+
       - name: 🧰 Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+        run: sudo apt-get install -y imagemagick
 
       - name: 🛡️ Patch ImageMagick policy
         run: |
           sudo sed -i 's/rights="none"/rights="read|write"/g' /etc/ImageMagick-6/policy.xml || true
 
-  
       - name: 🧾 Fetch latest script from Supabase
         run: |
           mkdir -p temp
@@ -39,10 +38,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
-      - name: 🗣️ Generate voiceover (XTTS v2)
+      - name: 🗣️ Generate Voiceover (XTTS v2)
         run: python generate_voiceover.py
 
-      - name: 🎥 Fetch video + audio assets
+      - name: 🎥 Fetch Background Video + Music
         run: python auto_fetch_assets.py
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -50,14 +49,14 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_MUSIC_BASE_URL: ${{ secrets.SUPABASE_MUSIC_BASE_URL }}
 
-      - name: 📹 Testing Reel Generation
+      - name: ✍️ Generate Captions with Timings
+        run: python captions_generator.py
+
+      - name: 📽️ Render Final Reel
         run: python render_reel.py
 
-
-      - name: ☁️ Upload final reel to Supabase
+      - name: ☁️ Upload Final Reel to Supabase
         run: python upload_final_reel.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-
-          
