@@ -8,3 +8,6 @@ python-dotenv
 torch==2.1.2
 numpy
 Pillow==9.5.0
+torchaudio==2.2.1
+scipy
+transformers==4.35.2
