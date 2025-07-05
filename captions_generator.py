@@ -1,11 +1,12 @@
-# captions_generator.py 🎬 PREMIUM CENTERED CAPTIONS VERSION
+# captions_generator.py 🎬 ULTIMATE REEL EDITION BY ChatGPT
 import os
 import json
 from moviepy.editor import (
     VideoFileClip, TextClip, CompositeVideoClip,
     AudioFileClip, ColorClip
 )
-from moviepy.video.fx import fadein, fadeout
+from moviepy.video.fx import fadein, fadeout, resize
+from moviepy.video.tools.drawing import color_gradient
 
 # === File Paths ===
 CHUNKS_METADATA = "temp/voiceover_metadata.json"
@@ -15,18 +16,23 @@ OUTPUT_VIDEO = "temp/final_reel.mp4"
 
 # === Caption Style Settings ===
 FONT = "Arial-Bold"
-FONT_SIZE = 42
-CAPTION_WIDTH_RATIO = 0.9
+FONT_SIZE = 48
+CAPTION_WIDTH_RATIO = 0.85
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
 STROKE_WIDTH = 2
 FADE_DURATION = 0.3
-BACKGROUND_OPACITY = 0.35
+BACKGROUND_OPACITY = 0.4
 MAX_WORDS_PER_LINE = 8
 
+# === Animation Settings ===
+SCALE_START = 0.92  # Zoom-in animation
+SCALE_END = 1.0
+
 # === Progress Bar Settings ===
-PROGRESS_HEIGHT = 8
+PROGRESS_HEIGHT = 10
 PROGRESS_COLOR = (255, 255, 255)
+
 
 def load_metadata(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -53,9 +59,9 @@ def create_caption_clip(text, start, duration, video_size):
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), None)
     )
 
-    # ⬇️ CAPTIONS NOW CENTERED
-    caption = caption.set_position("center")
-    caption = caption.set_start(start).set_duration(duration)
+    # Start small and scale up
+    caption = caption.set_position("center").set_start(start).set_duration(duration)
+    caption = caption.fx(resize.resize, SCALE_START).fx(resize.resize, lambda t: SCALE_START + (SCALE_END - SCALE_START) * min(t / duration, 1))
     caption = fadein.fadein(caption, FADE_DURATION)
     caption = fadeout.fadeout(caption, FADE_DURATION)
 
@@ -67,7 +73,6 @@ def create_background_overlay(start, duration, video_size):
         color=(0, 0, 0)
     ).set_opacity(BACKGROUND_OPACITY)
 
-    # ⬇️ CENTER background behind text
     overlay = overlay.set_position("center")
     overlay = overlay.set_start(start).set_duration(duration)
 
@@ -79,11 +84,16 @@ def create_progress_bar(duration, video_size):
         color=PROGRESS_COLOR
     ).set_position(("left", video_size[1] - PROGRESS_HEIGHT))
 
-    animated_bar = bar.resize(
-        lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT)
-    )
+    animated_bar = bar.resize(lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT))
 
     return animated_bar.set_duration(duration)
+
+def generate_gradient_overlay(video_size, duration):
+    gradient = ColorClip(
+        size=video_size,
+        color=(0, 0, 0)
+    ).set_opacity(0.2)
+    return gradient.set_duration(duration)
 
 def generate_all_layers(metadata, video_size, total_duration):
     caption_clips = []
@@ -102,10 +112,11 @@ def generate_all_layers(metadata, video_size, total_duration):
         overlays.append(bg_overlay)
 
     progress = create_progress_bar(total_duration, video_size)
-    return caption_clips + overlays + [progress]
+    gradient_layer = generate_gradient_overlay(video_size, total_duration)
+    return caption_clips + overlays + [progress, gradient_layer]
 
 def render_video():
-    print("🎬 Rendering high-quality final reel with centered captions and progress bar...")
+    print("🎬 Rendering ChatGPT-Ultimate Reel with cinematic edits...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError(f"❌ Background video missing: {INPUT_VIDEO}")
@@ -116,14 +127,13 @@ def render_video():
     audio = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
-    # Match video to audio length
     video = video.set_duration(audio.duration)
     overlays = generate_all_layers(metadata, video.size, audio.duration)
 
     final = CompositeVideoClip([video] + overlays).set_audio(audio)
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
 
-    print(f"✅ Final reel saved: {OUTPUT_VIDEO}")
+    print(f"✅ Final cinematic reel saved: {OUTPUT_VIDEO}")
 
 if __name__ == "__main__":
     render_video()
