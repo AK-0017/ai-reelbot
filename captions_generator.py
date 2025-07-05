@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 PREMIUM VERSION
+# captions_generator.py 🎬 PREMIUM CENTERED CAPTIONS VERSION
 import os
 import json
 from moviepy.editor import (
@@ -15,12 +15,11 @@ OUTPUT_VIDEO = "temp/final_reel.mp4"
 
 # === Caption Style Settings ===
 FONT = "Arial-Bold"
-FONT_SIZE = 38
+FONT_SIZE = 42
 CAPTION_WIDTH_RATIO = 0.9
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
 STROKE_WIDTH = 2
-BOTTOM_MARGIN = 100
 FADE_DURATION = 0.3
 BACKGROUND_OPACITY = 0.35
 MAX_WORDS_PER_LINE = 8
@@ -54,7 +53,8 @@ def create_caption_clip(text, start, duration, video_size):
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), None)
     )
 
-    caption = caption.set_position(("center", video_size[1] - BOTTOM_MARGIN))
+    # ⬇️ CAPTIONS NOW CENTERED
+    caption = caption.set_position("center")
     caption = caption.set_start(start).set_duration(duration)
     caption = fadein.fadein(caption, FADE_DURATION)
     caption = fadeout.fadeout(caption, FADE_DURATION)
@@ -63,11 +63,12 @@ def create_caption_clip(text, start, duration, video_size):
 
 def create_background_overlay(start, duration, video_size):
     overlay = ColorClip(
-        size=(video_size[0], FONT_SIZE * 2),
+        size=(int(video_size[0] * CAPTION_WIDTH_RATIO), FONT_SIZE * 2),
         color=(0, 0, 0)
     ).set_opacity(BACKGROUND_OPACITY)
 
-    overlay = overlay.set_position(("center", video_size[1] - BOTTOM_MARGIN))
+    # ⬇️ CENTER background behind text
+    overlay = overlay.set_position("center")
     overlay = overlay.set_start(start).set_duration(duration)
 
     return overlay
@@ -78,7 +79,6 @@ def create_progress_bar(duration, video_size):
         color=PROGRESS_COLOR
     ).set_position(("left", video_size[1] - PROGRESS_HEIGHT))
 
-    # ✅ FIX: Ensure width is never zero
     animated_bar = bar.resize(
         lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT)
     )
@@ -105,7 +105,7 @@ def generate_all_layers(metadata, video_size, total_duration):
     return caption_clips + overlays + [progress]
 
 def render_video():
-    print("🎬 Rendering high-quality final reel with animations and progress bar...")
+    print("🎬 Rendering high-quality final reel with centered captions and progress bar...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError(f"❌ Background video missing: {INPUT_VIDEO}")
@@ -116,7 +116,7 @@ def render_video():
     audio = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
-    # Trim video to match voiceover duration
+    # Match video to audio length
     video = video.set_duration(audio.duration)
     overlays = generate_all_layers(metadata, video.size, audio.duration)
 
