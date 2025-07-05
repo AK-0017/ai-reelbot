@@ -1,14 +1,13 @@
-# generate_voiceover.py ✅ XTTS v2 (multi-speaker, no prompt)
+# generate_voiceover.py ✅ XTTS v2 fixed speaker
 import os
-os.environ["COQUI_TOS_AGREED"] = "1"  # Skip ToS prompt
+os.environ["COQUI_TOS_AGREED"] = "1"
 
 from TTS.api import TTS
 
 INPUT_FILE = "temp/single_script.txt"
 OUTPUT_FILE = "temp/voiceover.mp3"
 
-# You can also try: "daniel", "poppy", "thorsten", "mai"
-DEFAULT_SPEAKER = "poppy"
+DEFAULT_SPEAKER = "en_1"  # <- use one of the actual available speakers
 LANGUAGE = "en"
 
 def load_script(path):
@@ -20,7 +19,16 @@ def load_script(path):
 def synthesize(text, output_path):
     print("🗣️ Generating voiceover with Coqui XTTS v2...")
     tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False, gpu=False)
-    tts.tts_to_file(text=text, speaker=DEFAULT_SPEAKER, language=LANGUAGE, file_path=output_path)
+    
+    # Print available speaker IDs (uncomment to debug)
+    # print("Available speakers:", tts.speakers)
+
+    tts.tts_to_file(
+        text=text,
+        speaker=DEFAULT_SPEAKER,
+        language=LANGUAGE,
+        file_path=output_path
+    )
     print(f"✅ Voiceover saved to: {output_path}")
 
 if __name__ == "__main__":
