@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 (Upgraded & Aesthetic)
+# captions_generator.py 🎬 FINAL FIXED VERSION
 import os
 import json
 from moviepy.editor import (
@@ -12,32 +12,34 @@ VOICEOVER_FILE = "temp/voiceover.mp3"
 INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
 
-# === Caption Settings ===
+# === Caption Style ===
 FONT = "Arial-Bold"
 FONT_SIZE = 38
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
 STROKE_WIDTH = 2
-BOTTOM_MARGIN = 120
 FADE_DURATION = 0.3
+MAX_WORDS_PER_LINE = 8
 
 def load_metadata(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def format_text(text, max_words=8):
+def format_text(text):
     words = text.split()
-    if len(words) <= max_words:
+    if len(words) <= MAX_WORDS_PER_LINE:
         return text
-    return "\n".join([" ".join(words[i:i+max_words]) for i in range(0, len(words), max_words)])
+    mid = len(words) // 2
+    return " ".join(words[:mid]) + "\n" + " ".join(words[mid:])
 
-def create_caption_clips(metadata, video_size):
+def generate_caption_clips(metadata, video_size):
     clips = []
     for chunk in metadata:
         text = format_text(chunk["text"])
         start, end = chunk["start"], chunk["end"]
         duration = max(0.5, end - start)
 
+        # Create styled animated caption
         caption = (
             TextClip(
                 text,
@@ -49,27 +51,30 @@ def create_caption_clips(metadata, video_size):
                 size=(int(video_size[0] * 0.85), None),
                 method="caption"
             )
-            .set_position(("center", video_size[1] - BOTTOM_MARGIN))
+            .set_position(("center", "bottom"))
             .set_start(start)
             .set_duration(duration)
-            .crossfadein(FADE_DURATION)
-            .crossfadeout(FADE_DURATION)
+            .fadein(FADE_DURATION)
+            .fadeout(FADE_DURATION)
         )
         clips.append(caption)
     return clips
 
 def render_video():
-    print("🎥 Rendering modern styled reel...")
+    print("🎥 Rendering your final reel with synced animated captions...")
+
     video = VideoFileClip(INPUT_VIDEO)
     audio = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
-    captions = create_caption_clips(metadata, video.size)
-    final = CompositeVideoClip([video] + captions)
-    final = final.set_audio(audio).set_duration(audio.duration)
+    captions = generate_caption_clips(metadata, video.size)
+
+    # ⛔ Important: make video shorter or match to audio duration
+    final = CompositeVideoClip([video.set_duration(audio.duration)] + captions)
+    final = final.set_audio(audio)
 
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
-    print(f"✅ Final reel saved: {OUTPUT_VIDEO}")
+    print(f"✅ Final exported: {OUTPUT_VIDEO}")
 
 if __name__ == "__main__":
     render_video()
