@@ -1,78 +1,91 @@
-# generate_voiceover.py ✅ XTTS v2 with reference voice and chunking
 import os
 os.environ["COQUI_TOS_AGREED"] = "1"  # ✅ Bypass CPML agreement prompt
 
-import json
-import time
 import nltk
+import json
+import datetime
 from TTS.api import TTS
-
+from pydub import AudioSegment
 
 nltk.download("punkt")
+from nltk.tokenize import sent_tokenize
 
-INPUT_FILE = "temp/single_script.txt"
+SCRIPT_FILE = "temp/single_script.txt"
 OUTPUT_DIR = "temp/voice_chunks"
+VOICEOVER_FILE = "temp/voiceover.mp3"
 METADATA_FILE = "temp/voiceover_metadata.json"
-REFERENCE_VOICE = "assets/ref.wav"
 MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
 LANGUAGE = "en"
+REFERENCE_WAV = "assets/ref.wav"
 
-def load_script(path):
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"❌ Script file not found: {path}")
-    with open(path, "r", encoding="utf-8") as f:
+# ------------------------------
+def read_script(filepath):
+    with open(filepath, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-def chunk_text(text):
-    from nltk.tokenize import sent_tokenize
-    return sent_tokenize(text)
+def split_into_chunks(script, max_chars=220):
+    sentences = sent_tokenize(script)
+    chunks = []
+    current_chunk = ""
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= max_chars:
+            current_chunk += sentence + " "
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence + " "
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    print(f"✂️ Script split into {len(chunks)} chunks.")
+    return chunks
 
+# ------------------------------
 def generate_voiceover_chunks(chunks, output_dir):
-    print("🗣️ Generating voiceover with Coqui XTTS v2...")
+    tts = TTS(model_name=MODEL_NAME, progress_bar=False, gpu=False)
     os.makedirs(output_dir, exist_ok=True)
 
-    if not os.path.exists(REFERENCE_VOICE):
-        raise FileNotFoundError(f"❌ Reference voice not found: {REFERENCE_VOICE}")
-
-    tts = TTS(model_name=MODEL_NAME, progress_bar=False, gpu=False)
-
     metadata = []
-    total_time = 0.0
-
     for i, sentence in enumerate(chunks):
-        filename = f"chunk_{i+1:02}.wav"
-        filepath = os.path.join(output_dir, filename)
-
+        chunk_file = os.path.join(output_dir, f"chunk_{i}.mp3")
         print(f"🎙️ Generating chunk {i+1}/{len(chunks)}: {sentence}")
-        start = time.time()
         tts.tts_to_file(
             text=sentence,
-            file_path=filepath,
-            speaker_wav=REFERENCE_VOICE,
-            language=LANGUAGE
+            speaker_wav=REFERENCE_WAV,
+            language=LANGUAGE,
+            file_path=chunk_file
         )
-        duration = time.time() - start
+
+        duration = AudioSegment.from_mp3(chunk_file).duration_seconds
         metadata.append({
             "text": sentence,
-            "file": filename,
-            "start_time": round(total_time, 2),
-            "end_time": round(total_time + duration, 2),
-            "duration": round(duration, 2)
+            "file": chunk_file,
+            "start": None,  # to be filled later
+            "duration": duration
         })
-        total_time += duration
-
-    return metadata
-
-if __name__ == "__main__":
-    os.makedirs("temp", exist_ok=True)
-
-    script = load_script(INPUT_FILE)
-    chunks = chunk_text(script)
-    print(f"✂️ Script split into {len(chunks)} chunks.")
-
-    metadata = generate_voiceover_chunks(chunks, OUTPUT_DIR)
 
     with open(METADATA_FILE, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
+    print(f"✅ Voiceover chunks and metadata saved to: {output_dir} and {METADATA_FILE}")
+    return metadata
 
-    print(f"✅ Voiceover chunks and metadata saved to: {OUTPUT_DIR}/ and {METADATA_FILE}")
+# ------------------------------
+def combine_chunks_to_single_voiceover(chunks_folder, output_file):
+    combined = AudioSegment.empty()
+    chunk_files = sorted([
+        os.path.join(chunks_folder, f) for f in os.listdir(chunks_folder)
+        if f.endswith(".mp3")
+    ])
+
+    for f in chunk_files:
+        combined += AudioSegment.from_mp3(f)
+
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    combined.export(output_file, format="mp3")
+    print(f"✅ Combined voiceover saved to: {output_file}")
+
+# ------------------------------
+if __name__ == "__main__":
+    print("🗣️ Generating voiceover with Coqui XTTS v2...")
+    script = read_script(SCRIPT_FILE)
+    chunks = split_into_chunks(script)
+    metadata = generate_voiceover_chunks(chunks, OUTPUT_DIR)
+    combine_chunks_to_single_voiceover(OUTPUT_DIR, VOICEOVER_FILE)
