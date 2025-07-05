@@ -1,4 +1,4 @@
-# generate_voiceover.py ✅
+# generate_voiceover.py ✅ (XTTS v2 Upgrade)
 import os
 from TTS.api import TTS
 
@@ -12,8 +12,8 @@ def load_script(path):
         return f.read().strip()
 
 def synthesize(text, output_path):
-    print("🗣️ Generating voiceover with Coqui TTS...")
-    tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC", progress_bar=False, gpu=False)
+    print("🗣️ Generating voiceover with Coqui XTTS v2...")
+    tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False, gpu=False)
     tts.tts_to_file(text=text, file_path=output_path)
     print(f"✅ Voiceover saved to: {output_path}")
 
