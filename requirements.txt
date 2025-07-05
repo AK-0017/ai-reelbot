@@ -5,9 +5,11 @@ yt-dlp
 supabase
 TTS==0.22.0
 python-dotenv
-torch==2.2.1
+torch==2.1.0
 numpy
 Pillow==9.5.0
-torchaudio==2.2.1
+torchaudio==2.1.0
 scipy
 transformers==4.35.2
+pydub==0.25.1
+nltk==3.8.1
