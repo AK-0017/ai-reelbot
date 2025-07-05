@@ -14,7 +14,7 @@ FONT = "Arial-Bold"
 FONT_SIZE = 42
 COLOR = "white"
 SHADOW_COLOR = "black"
-DURATION_PADDING = 0.2  # adds smoothness between captions
+DURATION_PADDING = 0.2
 
 def load_chunks_metadata(path):
     if not os.path.exists(path):
