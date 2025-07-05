@@ -1,10 +1,13 @@
-# captions_generator.py 🎬 ULTIMATE REEL EDITION v4 — Split Captions + Sentence Voiceover
+# captions_generator.py 🎬 ULTIMATE REEL v5 — Music Auto-Pick + Fade + Sync
+
 import os
 import json
+import random
 from moviepy.editor import (
     VideoFileClip, TextClip, CompositeVideoClip,
     AudioFileClip, ColorClip
 )
+from moviepy.audio.AudioClip import CompositeAudioClip
 from moviepy.video.fx import fadein, fadeout, resize
 
 # === File Paths ===
@@ -12,6 +15,7 @@ CHUNKS_METADATA = "temp/voiceover_metadata.json"
 VOICEOVER_FILE = "temp/voiceover.mp3"
 INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
+MUSIC_BUCKET = "background-music"  # 🔊 Folder containing multiple music tracks
 
 # === Caption Style ===
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -41,14 +45,19 @@ def load_metadata(path):
         return json.load(f)
 
 
-def split_text_into_chunks(text, max_words=6):
+def format_text(text):
     words = text.strip().split()
-    return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)]
+    if len(words) <= MAX_WORDS_PER_LINE:
+        return text
+    midpoint = len(words) // 2
+    return " ".join(words[:midpoint]) + "\n" + " ".join(words[midpoint:])
 
 
 def create_caption_clip(text, start, duration, video_size):
+    formatted_text = format_text(text)
+
     caption = TextClip(
-        text,
+        formatted_text,
         fontsize=FONT_SIZE,
         font=FONT_PATH,
         color=TEXT_COLOR,
@@ -95,6 +104,25 @@ def create_gradient_overlay(video_size, duration):
     return gradient.set_duration(duration)
 
 
+def pick_random_music(duration):
+    if not os.path.exists(MUSIC_BUCKET):
+        print("⚠️ Music folder missing, skipping music.")
+        return None
+
+    tracks = [f for f in os.listdir(MUSIC_BUCKET) if f.lower().endswith(".mp3")]
+    if not tracks:
+        print("⚠️ No music found in folder.")
+        return None
+
+    chosen = random.choice(tracks)
+    music_path = os.path.join(MUSIC_BUCKET, chosen)
+    print(f"🎵 Selected background track: {chosen}")
+
+    music = AudioFileClip(music_path).volumex(0.15)
+    music = music.audio_fadein(2).audio_fadeout(2)
+    return music.set_duration(duration)
+
+
 def generate_all_layers(metadata, video_size, total_duration):
     caption_clips = []
     overlays = []
@@ -105,16 +133,11 @@ def generate_all_layers(metadata, video_size, total_duration):
         end = chunk["end"]
         duration = max(0.5, end - start)
 
-        sub_chunks = split_text_into_chunks(text, MAX_WORDS_PER_LINE)
-        per_chunk_duration = duration / len(sub_chunks)
+        caption = create_caption_clip(text, start, duration, video_size)
+        bg = create_background_box(start, duration, video_size)
 
-        for i, part in enumerate(sub_chunks):
-            sub_start = start + i * per_chunk_duration
-            sub_caption = create_caption_clip(part, sub_start, per_chunk_duration, video_size)
-            bg = create_background_box(sub_start, per_chunk_duration, video_size)
-
-            caption_clips.append(sub_caption)
-            overlays.append(bg)
+        caption_clips.append(caption)
+        overlays.append(bg)
 
     progress = create_progress_bar(total_duration, video_size)
     gradient = create_gradient_overlay(video_size, total_duration)
@@ -123,23 +146,30 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering ULTIMATE REEL v4 — smooth voice + smart captions...")
+    print("🎬 Rendering ULTIMATE REEL v5 — music-enhanced and caption-synced...")
 
     if not os.path.exists(INPUT_VIDEO):
-        raise FileNotFoundError(f"❌ Background video missing: {INPUT_VIDEO}")
+        raise FileNotFoundError("❌ Background video missing.")
     if not os.path.exists(VOICEOVER_FILE):
-        raise FileNotFoundError(f"❌ Voiceover missing: {VOICEOVER_FILE}")
+        raise FileNotFoundError("❌ Voiceover missing.")
     if not os.path.exists(CHUNKS_METADATA):
-        raise FileNotFoundError(f"❌ Metadata missing: {CHUNKS_METADATA}")
+        raise FileNotFoundError("❌ Metadata missing.")
 
     video = VideoFileClip(INPUT_VIDEO)
-    audio = AudioFileClip(VOICEOVER_FILE)
+    voiceover = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
-    video = video.set_duration(audio.duration)
-    layers = generate_all_layers(metadata, video.size, audio.duration)
+    music = pick_random_music(voiceover.duration)
 
-    final = CompositeVideoClip([video] + layers).set_audio(audio)
+    if music:
+        final_audio = CompositeAudioClip([music, voiceover])
+    else:
+        final_audio = voiceover
+
+    video = video.set_duration(voiceover.duration)
+    layers = generate_all_layers(metadata, video.size, voiceover.duration)
+
+    final = CompositeVideoClip([video] + layers).set_audio(final_audio)
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
 
     print(f"✅ Final cinematic reel saved: {OUTPUT_VIDEO}")
