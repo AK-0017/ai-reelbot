@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 ULTIMATE REEL EDITION v2 — Chunk Synced + Cinematic
+# captions_generator.py 🎬 ULTIMATE REEL EDITION v3 — Solid Font + Cinematic Effects
 import os
 import json
 from moviepy.editor import (
@@ -14,11 +14,11 @@ INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
 
 # === Caption Style ===
-FONT = "Arial-Bold"
-FONT_SIZE = 48
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"  # ✅ More solid font
+FONT_SIZE = 50
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
-STROKE_WIDTH = 2
+STROKE_WIDTH = 3
 CAPTION_WIDTH_RATIO = 0.85
 MAX_WORDS_PER_LINE = 6
 CAPTION_FADE_DURATION = 0.3
@@ -55,7 +55,7 @@ def create_caption_clip(text, start, duration, video_size):
     caption = TextClip(
         formatted_text,
         fontsize=FONT_SIZE,
-        font=FONT,
+        font=FONT_PATH,
         color=TEXT_COLOR,
         stroke_color=STROKE_COLOR,
         stroke_width=STROKE_WIDTH,
@@ -63,7 +63,6 @@ def create_caption_clip(text, start, duration, video_size):
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), None)
     )
 
-    # Center vertically around center height
     y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - caption.h // 2
 
     caption = caption.set_position(("center", y_pos)).set_start(start).set_duration(duration)
@@ -124,7 +123,7 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering ULTIMATE REEL with synced captions, zoom & overlays...")
+    print("🎬 Rendering ULTIMATE REEL v3 — styled & chunk-synced...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError(f"❌ Background video missing: {INPUT_VIDEO}")
