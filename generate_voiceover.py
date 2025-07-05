@@ -56,7 +56,7 @@ def generate_voiceover_chunks(chunks, output_dir):
         duration = len(audio) / 1000.0  # duration in seconds
 
         metadata.append({
-            "chunk": sentence.strip(),
+            "text": sentence.strip(),  # ✅ Changed from "chunk" to "text"
             "file": filename,
             "start": round(current_time, 2),
             "end": round(current_time + duration, 2),
