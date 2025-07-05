@@ -5,7 +5,7 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, AudioFil
 
 CHUNKS_METADATA = "temp/chunks_metadata.json"
 VOICEOVER_FILE = "temp/voiceover.mp3"
-INPUT_VIDEO = "temp/background_video.mp4"
+INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
 
 # 🧠 Caption Style
