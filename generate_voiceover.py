@@ -1,14 +1,12 @@
-# generate_voiceover.py ✅ XTTS v2 working without custom speaker
+# generate_voiceover.py ✅ XTTS v2 with reference wav
 import os
-os.environ["COQUI_TOS_AGREED"] = "1"
+os.environ["COQUI_TOS_AGREED"] = "1"  # Bypass license popup
 
 from TTS.api import TTS
 
 INPUT_FILE = "temp/single_script.txt"
 OUTPUT_FILE = "temp/voiceover.mp3"
-
-# XTTS needs valid speaker name - use "default" for built-in
-DEFAULT_SPEAKER = "default"
+REFERENCE_WAV = "assets/ref.wav"
 LANGUAGE = "en"
 
 def load_script(path):
@@ -21,12 +19,10 @@ def synthesize(text, output_path):
     print("🗣️ Generating voiceover with Coqui XTTS v2...")
     tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False, gpu=False)
 
-    # Print speakers if needed:
-    # print("Available speakers:", tts.speakers)
-
+    # ✅ Use real voice sample for generation
     tts.tts_to_file(
         text=text,
-        speaker=DEFAULT_SPEAKER,
+        speaker_wav=REFERENCE_WAV,
         language=LANGUAGE,
         file_path=output_path
     )
