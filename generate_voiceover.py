@@ -1,4 +1,4 @@
-# generate_voiceover.py ✅ XTTS v2 fixed speaker
+# generate_voiceover.py ✅ XTTS v2 working without custom speaker
 import os
 os.environ["COQUI_TOS_AGREED"] = "1"
 
@@ -7,7 +7,8 @@ from TTS.api import TTS
 INPUT_FILE = "temp/single_script.txt"
 OUTPUT_FILE = "temp/voiceover.mp3"
 
-DEFAULT_SPEAKER = "en_1"  # <- use one of the actual available speakers
+# XTTS needs valid speaker name - use "default" for built-in
+DEFAULT_SPEAKER = "default"
 LANGUAGE = "en"
 
 def load_script(path):
@@ -19,8 +20,8 @@ def load_script(path):
 def synthesize(text, output_path):
     print("🗣️ Generating voiceover with Coqui XTTS v2...")
     tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=False, gpu=False)
-    
-    # Print available speaker IDs (uncomment to debug)
+
+    # Print speakers if needed:
     # print("Available speakers:", tts.speakers)
 
     tts.tts_to_file(
