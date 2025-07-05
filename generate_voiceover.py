@@ -1,15 +1,16 @@
-# generate_voiceover.py 🗣️
+# generate_voiceover.py 🎙️
 import os
 import nltk
 import json
 from TTS.api import TTS
 from pydub import AudioSegment
+from datetime import datetime
 from pathlib import Path
 
-# Coqui XTTS TOS agreement
+# ✅ Auto-agree to Coqui XTTS TOS
 os.environ["COQUI_TOS_AGREED"] = "1"
 
-# 📁 File paths
+# === Constants ===
 SCRIPT_FILE = "temp/single_script.txt"
 OUTPUT_DIR = "temp/voice_chunks"
 MERGED_VOICEOVER = "temp/voiceover.mp3"
@@ -18,38 +19,36 @@ REF_AUDIO_PATH = "assets/ref.wav"
 MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
 LANGUAGE = "en"
 
+# 📥 Ensure sentence tokenizer is ready
 nltk.download("punkt", quiet=True)
 
-def smart_chunking(script, max_chars=180):
-    """Split script into natural, speakable chunks (not just short sentences)."""
+def split_script(script):
+    """Split script into clean sentence chunks for TTS."""
     raw_sentences = nltk.sent_tokenize(script.strip())
-    chunks, current = [], ""
-
-    for sentence in raw_sentences:
-        if len(current) + len(sentence) < max_chars:
-            current += " " + sentence if current else sentence
-        else:
-            chunks.append(current.strip())
-            current = sentence
-    if current:
-        chunks.append(current.strip())
-
-    print(f"✂️ Script split into {len(chunks)} smart chunks.")
-    return chunks
+    sentences = [s.strip() for s in raw_sentences if s.strip()]
+    print(f"✂️ Script split into {len(sentences)} smart chunks.")
+    return sentences
 
 def generate_voiceover_chunks(chunks, output_dir):
-    """Generate and store voiceover chunks with timestamps."""
+    """Generate TTS for each chunk and return metadata."""
     os.makedirs(output_dir, exist_ok=True)
+
+    print("🗣️ Generating voiceover with Coqui XTTS v2...")
     tts = TTS(model_name=MODEL_NAME, progress_bar=False, gpu=False)
 
     metadata = []
     current_time = 0.0
 
     for idx, sentence in enumerate(chunks):
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+
         print(f"🎙️ Chunk {idx+1}/{len(chunks)}: {sentence}")
         filename = f"chunk_{idx+1:02d}.mp3"
         filepath = os.path.join(output_dir, filename)
 
+        # Generate using reference voice
         tts.tts_to_file(
             text=sentence,
             file_path=filepath,
@@ -57,6 +56,7 @@ def generate_voiceover_chunks(chunks, output_dir):
             language=LANGUAGE
         )
 
+        # Get duration
         audio = AudioSegment.from_file(filepath)
         duration = len(audio) / 1000.0
 
@@ -73,23 +73,27 @@ def generate_voiceover_chunks(chunks, output_dir):
     return metadata
 
 def merge_chunks(chunks_dir, output_path):
-    """Merge all MP3 chunks into a single voiceover."""
+    """Merge all audio chunks into a single file."""
     combined = AudioSegment.empty()
-    for file in sorted(Path(chunks_dir).glob("chunk_*.mp3")):
-        combined += AudioSegment.from_file(file)
+    files = sorted(Path(chunks_dir).glob("chunk_*.mp3"))
+
+    for file in files:
+        segment = AudioSegment.from_file(file)
+        combined += segment
+
     combined.export(output_path, format="mp3")
-    print(f"✅ Merged voiceover saved to: {output_path}")
+    print(f"✅ Final voiceover saved to: {output_path}")
 
 def save_metadata(metadata, path):
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
-    print(f"✅ Metadata saved to: {path}")
+    print(f"✅ Voiceover metadata saved to: {path}")
 
 def main():
     with open(SCRIPT_FILE, "r", encoding="utf-8") as f:
         script = f.read()
 
-    chunks = smart_chunking(script)
+    chunks = split_script(script)
     metadata = generate_voiceover_chunks(chunks, OUTPUT_DIR)
     merge_chunks(OUTPUT_DIR, MERGED_VOICEOVER)
     save_metadata(metadata, METADATA_FILE)
