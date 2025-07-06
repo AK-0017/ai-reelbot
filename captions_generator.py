@@ -1,11 +1,10 @@
-# captions_generator.py 🎬 FINAL v10 — Removed background box, looped music & video
 import os
 import json
 from moviepy.editor import (
     VideoFileClip, TextClip, CompositeVideoClip,
     AudioFileClip, ColorClip, concatenate_videoclips
 )
-from moviepy.audio.AudioClip import CompositeAudioClip
+from moviepy.audio.AudioClip import CompositeAudioClip, concatenate_audioclips
 from moviepy.video.fx import fadein, fadeout, resize
 
 # === File Paths ===
@@ -32,9 +31,11 @@ CAPTION_CENTER_HEIGHT = 0.55
 PROGRESS_HEIGHT = 8
 PROGRESS_COLOR = (255, 255, 255)
 
+
 def load_metadata(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def format_text(text):
     words = text.strip().split()
@@ -42,6 +43,7 @@ def format_text(text):
         return text
     midpoint = len(words) // 2
     return " ".join(words[:midpoint]) + "\n" + " ".join(words[midpoint:])
+
 
 def create_caption_clip(text, start, duration, video_size):
     formatted_text = format_text(text)
@@ -62,27 +64,43 @@ def create_caption_clip(text, start, duration, video_size):
     )
     return fadeout.fadeout(fadein.fadein(caption, CAPTION_FADE_DURATION), CAPTION_FADE_DURATION)
 
+
 def create_progress_bar(duration, video_size):
     bar = ColorClip(size=(1, PROGRESS_HEIGHT), color=PROGRESS_COLOR)
     animated_bar = bar.resize(lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT))
     return animated_bar.set_position(("left", video_size[1] - PROGRESS_HEIGHT)).set_duration(duration)
 
+
+def create_gradient_overlay(video_size, duration):
+    return ColorClip(size=video_size, color=(0, 0, 0)).set_opacity(0.2).set_duration(duration)
+
+
+# ✅ Utility to repeat a clip (video or audio)
+def loop_clip_to_duration(clip, target_duration):
+    loops_needed = int(target_duration // clip.duration) + 1
+    if isinstance(clip, AudioFileClip):
+        return concatenate_audioclips([clip] * loops_needed).subclip(0, target_duration)
+    else:
+        return concatenate_videoclips([clip] * loops_needed).subclip(0, target_duration)
+
+
 def generate_all_layers(metadata, video_size, total_duration):
     caption_clips = []
+
     for chunk in metadata:
         text = chunk["text"]
         start = chunk["start"]
         end = chunk["end"]
         duration = max(0.5, end - start)
+
         caption = create_caption_clip(text, start, duration, video_size)
         caption_clips.append(caption)
 
     progress = create_progress_bar(total_duration, video_size)
-    return caption_clips + [progress]
+    gradient = create_gradient_overlay(video_size, total_duration)
 
-def loop_clip_to_duration(clip, target_duration):
-    loops_needed = int(target_duration // clip.duration) + 1
-    return concatenate_videoclips([clip] * loops_needed).subclip(0, target_duration)
+    return caption_clips + [progress, gradient]
+
 
 def render_video():
     print("🎬 Rendering FINAL v10 — Loop bg/music + clean captions...")
@@ -92,26 +110,31 @@ def render_video():
     if not os.path.exists(VOICEOVER_FILE):
         raise FileNotFoundError("❌ Voiceover missing.")
     if not os.path.exists(CAPTIONS_METADATA):
-        raise FileNotFoundError("❌ Caption metadata missing.")
+        raise FileNotFoundError("❌ Caption chunk metadata missing.")
 
-    video = VideoFileClip(INPUT_VIDEO)
     voiceover = AudioFileClip(VOICEOVER_FILE)
-    metadata = load_metadata(CAPTIONS_METADATA)
+    caption_metadata = load_metadata(CAPTIONS_METADATA)
 
-    video = loop_clip_to_duration(video, voiceover.duration)
+    # 🔁 Loop background video to match voiceover
+    video = loop_clip_to_duration(VideoFileClip(INPUT_VIDEO).without_audio(), voiceover.duration)
 
+    # 🔁 Loop music to match voiceover
     if os.path.exists(MUSIC_FILE):
         print("🎵 Adding looping music...")
         music = loop_clip_to_duration(AudioFileClip(MUSIC_FILE).volumex(0.15), voiceover.duration)
         final_audio = CompositeAudioClip([music, voiceover])
     else:
+        print("⚠️ No music file found, using voiceover only.")
         final_audio = voiceover
 
-    layers = generate_all_layers(metadata, video.size, voiceover.duration)
-    final = CompositeVideoClip([video] + layers).set_audio(final_audio).set_duration(voiceover.duration)
+    video = video.set_duration(voiceover.duration)
+    layers = generate_all_layers(caption_metadata, video.size, voiceover.duration)
+
+    final = CompositeVideoClip([video] + layers).set_audio(final_audio)
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
 
     print(f"✅ Final cinematic reel saved: {OUTPUT_VIDEO}")
+
 
 if __name__ == "__main__":
     render_video()
