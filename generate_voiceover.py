@@ -1,4 +1,5 @@
-# generate_voiceover.py 🎙️ Sentence-Based Voiceover Edition
+# generate_voiceover.py 🎙️ + 📜 Caption Chunk Enhanced Edition
+
 import os
 import nltk
 import json
@@ -14,6 +15,7 @@ SCRIPT_FILE = "temp/single_script.txt"
 OUTPUT_DIR = "temp/voice_chunks"
 MERGED_VOICEOVER = "temp/voiceover.mp3"
 METADATA_FILE = "temp/voiceover_metadata.json"
+CAPTIONS_FILE = "temp/caption_chunks.json"
 REF_AUDIO_PATH = "assets/ref.wav"
 
 # === TTS Settings ===
@@ -25,12 +27,22 @@ nltk.download("punkt", quiet=True)
 
 
 def split_into_sentences(text):
-    """Split text into full natural sentences."""
     return nltk.sent_tokenize(text.strip())
 
 
+def split_sentence_into_caption_chunks(sentence, max_words=6):
+    """Split a sentence into smaller caption chunks of ~5-7 words."""
+    words = sentence.strip().split()
+    chunks = []
+    for i in range(0, len(words), max_words):
+        chunk = words[i:i+max_words]
+        if chunk:
+            chunks.append(" ".join(chunk))
+    return chunks
+
+
 def generate_voiceover(sentences, output_dir):
-    """Generate voiceover chunks using XTTS for each full sentence."""
+    """Generate XTTS audio for sentence-wise chunks, return voiceover metadata."""
     os.makedirs(output_dir, exist_ok=True)
     tts = TTS(model_name=MODEL_NAME, progress_bar=False, gpu=False)
 
@@ -49,7 +61,7 @@ def generate_voiceover(sentences, output_dir):
 
         print(f"🎤 [{idx+1}/{len(sentences)}] {sentence}")
 
-        # Generate TTS audio
+        # Generate TTS
         tts.tts_to_file(
             text=sentence,
             file_path=filepath,
@@ -57,7 +69,6 @@ def generate_voiceover(sentences, output_dir):
             language=LANGUAGE
         )
 
-        # Calculate duration
         audio = AudioSegment.from_file(filepath)
         duration = len(audio) / 1000.0
 
@@ -74,8 +85,37 @@ def generate_voiceover(sentences, output_dir):
     return metadata
 
 
+def generate_caption_chunks(voiceover_metadata, max_words=6):
+    """Break each sentence into caption chunks and distribute timings."""
+    captions = []
+
+    for item in voiceover_metadata:
+        sentence = item["text"]
+        start = item["start"]
+        end = item["end"]
+        duration = item["duration"]
+
+        chunks = split_sentence_into_caption_chunks(sentence, max_words)
+        num_chunks = len(chunks)
+        if num_chunks == 0:
+            continue
+
+        chunk_duration = duration / num_chunks
+
+        for i, chunk in enumerate(chunks):
+            chunk_start = round(start + i * chunk_duration, 2)
+            chunk_end = round(chunk_start + chunk_duration, 2)
+            captions.append({
+                "text": chunk,
+                "start": chunk_start,
+                "end": chunk_end,
+                "duration": round(chunk_duration, 2)
+            })
+
+    return captions
+
+
 def merge_audio_chunks(input_dir, output_path):
-    """Merge all chunk MP3s into one final voiceover."""
     combined = AudioSegment.empty()
     for file in sorted(Path(input_dir).glob("chunk_*.mp3")):
         combined += AudioSegment.from_file(file)
@@ -83,10 +123,10 @@ def merge_audio_chunks(input_dir, output_path):
     print(f"✅ Final voiceover saved: {output_path}")
 
 
-def save_metadata(metadata, path):
+def save_json(data, path, label="File"):
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2)
-    print(f"✅ Voiceover metadata saved: {path}")
+        json.dump(data, f, indent=2)
+    print(f"✅ {label} saved: {path}")
 
 
 def main():
@@ -94,9 +134,12 @@ def main():
         script = f.read()
 
     sentences = split_into_sentences(script)
-    metadata = generate_voiceover(sentences, OUTPUT_DIR)
+    voiceover_meta = generate_voiceover(sentences, OUTPUT_DIR)
+    captions_meta = generate_caption_chunks(voiceover_meta)
+
     merge_audio_chunks(OUTPUT_DIR, MERGED_VOICEOVER)
-    save_metadata(metadata, METADATA_FILE)
+    save_json(voiceover_meta, METADATA_FILE, "Voiceover metadata")
+    save_json(captions_meta, CAPTIONS_FILE, "Caption chunks")
 
 
 if __name__ == "__main__":
