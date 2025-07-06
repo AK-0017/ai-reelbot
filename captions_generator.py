@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 FINAL v7 — Uses pre-downloaded music.mp3 with fade & voiceover mix
+# captions_generator.py 🎬 FINAL v8 — Uses small caption chunks + voiceover + music fade
 import os
 import json
 from moviepy.editor import (
@@ -9,11 +9,11 @@ from moviepy.audio.AudioClip import CompositeAudioClip
 from moviepy.video.fx import fadein, fadeout, resize
 
 # === File Paths ===
-CHUNKS_METADATA = "temp/voiceover_metadata.json"
+CAPTIONS_METADATA = "temp/caption_chunks.json"  # ✅ NEW: Short caption chunks
 VOICEOVER_FILE = "temp/voiceover.mp3"
 INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
-MUSIC_FILE = "temp/music.mp3"  # ✅ Pre-fetched music file from auto_fetch_assets.py
+MUSIC_FILE = "temp/music.mp3"
 
 # === Caption Style ===
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -113,30 +113,30 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering ULTIMATE REEL v7 — with downloaded music + smooth captions...")
+    print("🎬 Rendering FINAL v8 — Small captions + voiceover + background music...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError("❌ Background video missing.")
     if not os.path.exists(VOICEOVER_FILE):
         raise FileNotFoundError("❌ Voiceover missing.")
-    if not os.path.exists(CHUNKS_METADATA):
-        raise FileNotFoundError("❌ Metadata missing.")
+    if not os.path.exists(CAPTIONS_METADATA):
+        raise FileNotFoundError("❌ Caption chunk metadata missing.")
 
     video = VideoFileClip(INPUT_VIDEO)
     voiceover = AudioFileClip(VOICEOVER_FILE)
-    metadata = load_metadata(CHUNKS_METADATA)
+    caption_metadata = load_metadata(CAPTIONS_METADATA)
 
-    # ✅ Use temp/music.mp3 if available
+    # 🔊 Combine music with voiceover if available
     if os.path.exists(MUSIC_FILE):
-        print("🎵 Adding background music from auto_fetch_assets.py...")
+        print("🎵 Adding background music (faded)...")
         music = AudioFileClip(MUSIC_FILE).volumex(0.15).audio_fadein(2).audio_fadeout(2)
         final_audio = CompositeAudioClip([music, voiceover])
     else:
-        print("⚠️ Music file not found, using voiceover only.")
+        print("⚠️ No music file found, using voiceover only.")
         final_audio = voiceover
 
     video = video.set_duration(voiceover.duration)
-    layers = generate_all_layers(metadata, video.size, voiceover.duration)
+    layers = generate_all_layers(caption_metadata, video.size, voiceover.duration)
 
     final = CompositeVideoClip([video] + layers).set_audio(final_audio)
     final.write_videofile(OUTPUT_VIDEO, codec="libx264", audio_codec="aac", fps=24)
