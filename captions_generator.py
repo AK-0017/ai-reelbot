@@ -6,6 +6,7 @@ from moviepy.editor import (
     AudioFileClip, concatenate_videoclips, ColorClip
 )
 from moviepy.audio.AudioClip import CompositeAudioClip
+from moviepy.audio.fx.all import audio_loop
 from moviepy.video.fx import fadein, fadeout, resize
 
 # === File Paths ===
@@ -110,7 +111,7 @@ def render_video():
         print("🎵 Adding looping music...")
         music_clip = AudioFileClip(MUSIC_FILE).volumex(0.15)
         loops = int(voiceover.duration // music_clip.duration) + 1
-        music_full = music_clip.fx(resize.resize, 1).audio_loop(duration=voiceover.duration).subclip(0, voiceover.duration)
+        music_full = audio_loop(music_clip, duration=voiceover.duration).subclip(0, voiceover.duration)
         music_faded = music_full.audio_fadein(2).audio_fadeout(2)
         final_audio = CompositeAudioClip([music_faded, voiceover])
     else:
