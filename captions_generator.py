@@ -1,4 +1,4 @@
-captions_generator.py 🎬 FINAL v9 — Loop background + refined captions
+#captions_generator.py 🎬 FINAL v9 — Loop background + refined captions
 
 import os import json from moviepy.editor import ( VideoFileClip, TextClip, CompositeVideoClip, AudioFileClip, ColorClip ) from moviepy.audio.AudioClip import CompositeAudioClip from moviepy.video.fx import fadein, fadeout, resize
 
