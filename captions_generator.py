@@ -1,8 +1,6 @@
-# captions_generator.py 🎬 ULTIMATE REEL v5 — Music Auto-Pick + Fade + Sync
-
+# captions_generator.py 🎬 FINAL v7 — Uses pre-downloaded music.mp3 with fade & voiceover mix
 import os
 import json
-import random
 from moviepy.editor import (
     VideoFileClip, TextClip, CompositeVideoClip,
     AudioFileClip, ColorClip
@@ -15,7 +13,7 @@ CHUNKS_METADATA = "temp/voiceover_metadata.json"
 VOICEOVER_FILE = "temp/voiceover.mp3"
 INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
-MUSIC_BUCKET = "background-music"  # 🔊 Folder containing multiple music tracks
+MUSIC_FILE = "temp/music.mp3"  # ✅ Pre-fetched music file from auto_fetch_assets.py
 
 # === Caption Style ===
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -55,7 +53,6 @@ def format_text(text):
 
 def create_caption_clip(text, start, duration, video_size):
     formatted_text = format_text(text)
-
     caption = TextClip(
         formatted_text,
         fontsize=FONT_SIZE,
@@ -66,17 +63,12 @@ def create_caption_clip(text, start, duration, video_size):
         method="caption",
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), None)
     )
-
     y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - caption.h // 2
-
     caption = caption.set_position(("center", y_pos)).set_start(start).set_duration(duration)
     caption = caption.fx(resize.resize, CAPTION_SCALE_START).fx(
         resize.resize, lambda t: CAPTION_SCALE_START + (CAPTION_SCALE_END - CAPTION_SCALE_START) * min(t / duration, 1)
     )
-    caption = fadein.fadein(caption, CAPTION_FADE_DURATION)
-    caption = fadeout.fadeout(caption, CAPTION_FADE_DURATION)
-
-    return caption
+    return fadeout.fadeout(fadein.fadein(caption, CAPTION_FADE_DURATION), CAPTION_FADE_DURATION)
 
 
 def create_background_box(start, duration, video_size):
@@ -84,43 +76,18 @@ def create_background_box(start, duration, video_size):
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), BACKGROUND_HEIGHT),
         color=(0, 0, 0)
     ).set_opacity(BACKGROUND_OPACITY)
-
     y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - BACKGROUND_HEIGHT // 2
     return box.set_position(("center", y_pos)).set_start(start).set_duration(duration)
 
 
 def create_progress_bar(duration, video_size):
-    bar = ColorClip(
-        size=(1, PROGRESS_HEIGHT),
-        color=PROGRESS_COLOR
-    ).set_position(("left", video_size[1] - PROGRESS_HEIGHT))
-
+    bar = ColorClip(size=(1, PROGRESS_HEIGHT), color=PROGRESS_COLOR)
     animated_bar = bar.resize(lambda t: (max(2, int(video_size[0] * (t / duration))), PROGRESS_HEIGHT))
-    return animated_bar.set_duration(duration)
+    return animated_bar.set_position(("left", video_size[1] - PROGRESS_HEIGHT)).set_duration(duration)
 
 
 def create_gradient_overlay(video_size, duration):
-    gradient = ColorClip(size=video_size, color=(0, 0, 0)).set_opacity(GRADIENT_OPACITY)
-    return gradient.set_duration(duration)
-
-
-def pick_random_music(duration):
-    if not os.path.exists(MUSIC_BUCKET):
-        print("⚠️ Music folder missing, skipping music.")
-        return None
-
-    tracks = [f for f in os.listdir(MUSIC_BUCKET) if f.lower().endswith(".mp3")]
-    if not tracks:
-        print("⚠️ No music found in folder.")
-        return None
-
-    chosen = random.choice(tracks)
-    music_path = os.path.join(MUSIC_BUCKET, chosen)
-    print(f"🎵 Selected background track: {chosen}")
-
-    music = AudioFileClip(music_path).volumex(0.15)
-    music = music.audio_fadein(2).audio_fadeout(2)
-    return music.set_duration(duration)
+    return ColorClip(size=video_size, color=(0, 0, 0)).set_opacity(GRADIENT_OPACITY).set_duration(duration)
 
 
 def generate_all_layers(metadata, video_size, total_duration):
@@ -146,7 +113,7 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering ULTIMATE REEL v5 — music-enhanced and caption-synced...")
+    print("🎬 Rendering ULTIMATE REEL v7 — with downloaded music + smooth captions...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError("❌ Background video missing.")
@@ -159,11 +126,13 @@ def render_video():
     voiceover = AudioFileClip(VOICEOVER_FILE)
     metadata = load_metadata(CHUNKS_METADATA)
 
-    music = pick_random_music(voiceover.duration)
-
-    if music:
+    # ✅ Use temp/music.mp3 if available
+    if os.path.exists(MUSIC_FILE):
+        print("🎵 Adding background music from auto_fetch_assets.py...")
+        music = AudioFileClip(MUSIC_FILE).volumex(0.15).audio_fadein(2).audio_fadeout(2)
         final_audio = CompositeAudioClip([music, voiceover])
     else:
+        print("⚠️ Music file not found, using voiceover only.")
         final_audio = voiceover
 
     video = video.set_duration(voiceover.duration)
