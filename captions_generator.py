@@ -1,4 +1,4 @@
-# captions_generator.py 🎬 FINAL v8 — Uses small caption chunks + voiceover + music fade
+# captions_generator.py 🎬 FINAL v9 — Enhanced cinematic captions with animation, polish, and music mix
 import os
 import json
 from moviepy.editor import (
@@ -9,28 +9,28 @@ from moviepy.audio.AudioClip import CompositeAudioClip
 from moviepy.video.fx import fadein, fadeout, resize
 
 # === File Paths ===
-CAPTIONS_METADATA = "temp/caption_chunks.json"  # ✅ NEW: Short caption chunks
+CAPTIONS_METADATA = "temp/caption_chunks.json"
 VOICEOVER_FILE = "temp/voiceover.mp3"
 INPUT_VIDEO = "temp/background.mp4"
 OUTPUT_VIDEO = "temp/final_reel.mp4"
 MUSIC_FILE = "temp/music.mp3"
 
 # === Caption Style ===
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"  # Replace with Poppins/Montserrat if available
 FONT_SIZE = 50
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
-STROKE_WIDTH = 3
-CAPTION_WIDTH_RATIO = 0.85
+STROKE_WIDTH = 2
+CAPTION_WIDTH_RATIO = 0.88
 MAX_WORDS_PER_LINE = 6
-CAPTION_FADE_DURATION = 0.3
-CAPTION_SCALE_START = 0.95
+CAPTION_FADE_DURATION = 0.35
+CAPTION_SCALE_START = 0.92
 CAPTION_SCALE_END = 1.0
-CAPTION_CENTER_HEIGHT = 0.55
+CAPTION_CENTER_HEIGHT = 0.56
 
 # === Overlay & Background ===
-BACKGROUND_OPACITY = 0.4
-GRADIENT_OPACITY = 0.2
+BACKGROUND_OPACITY = 0.25  # Softer background box
+GRADIENT_OPACITY = 0.25
 BACKGROUND_HEIGHT = FONT_SIZE * 2
 
 # === Progress Bar ===
@@ -72,11 +72,10 @@ def create_caption_clip(text, start, duration, video_size):
 
 
 def create_background_box(start, duration, video_size):
-    box = ColorClip(
-        size=(int(video_size[0] * CAPTION_WIDTH_RATIO), BACKGROUND_HEIGHT),
-        color=(0, 0, 0)
-    ).set_opacity(BACKGROUND_OPACITY)
-    y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - BACKGROUND_HEIGHT // 2
+    box_width = int(video_size[0] * CAPTION_WIDTH_RATIO)
+    box_height = BACKGROUND_HEIGHT
+    box = ColorClip(size=(box_width, box_height), color=(0, 0, 0)).set_opacity(BACKGROUND_OPACITY)
+    y_pos = int(video_size[1] * CAPTION_CENTER_HEIGHT) - box_height // 2
     return box.set_position(("center", y_pos)).set_start(start).set_duration(duration)
 
 
@@ -87,7 +86,8 @@ def create_progress_bar(duration, video_size):
 
 
 def create_gradient_overlay(video_size, duration):
-    return ColorClip(size=video_size, color=(0, 0, 0)).set_opacity(GRADIENT_OPACITY).set_duration(duration)
+    gradient = ColorClip(size=video_size, color=(0, 0, 0))
+    return gradient.set_opacity(GRADIENT_OPACITY).set_duration(duration)
 
 
 def generate_all_layers(metadata, video_size, total_duration):
@@ -113,7 +113,7 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering FINAL v8 — Small captions + voiceover + background music...")
+    print("🎬 Rendering FINAL v9 — Enhanced captions, smooth visuals, music mix...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError("❌ Background video missing.")
@@ -122,11 +122,10 @@ def render_video():
     if not os.path.exists(CAPTIONS_METADATA):
         raise FileNotFoundError("❌ Caption chunk metadata missing.")
 
-    video = VideoFileClip(INPUT_VIDEO)
+    video = VideoFileClip(INPUT_VIDEO).fx(fadein.fadein, 0.5).fx(fadeout.fadeout, 0.5)
     voiceover = AudioFileClip(VOICEOVER_FILE)
     caption_metadata = load_metadata(CAPTIONS_METADATA)
 
-    # 🔊 Combine music with voiceover if available
     if os.path.exists(MUSIC_FILE):
         print("🎵 Adding background music (faded)...")
         music = AudioFileClip(MUSIC_FILE).volumex(0.15).audio_fadein(2).audio_fadeout(2)
