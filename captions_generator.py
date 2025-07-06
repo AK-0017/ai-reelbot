@@ -1,9 +1,9 @@
-# captions_generator.py 🎬 FINAL v10 — Loop bg/music + clean captions
+# captions_generator.py 🎬 FINAL v11 — Clean + Slide captions + Zoomed video + Music loop
 import os
 import json
 from moviepy.editor import (
     VideoFileClip, TextClip, CompositeVideoClip,
-    AudioFileClip, concatenate_videoclips, ColorClip
+    AudioFileClip, ColorClip, vfx
 )
 from moviepy.audio.AudioClip import CompositeAudioClip
 from moviepy.audio.fx.all import audio_loop
@@ -17,11 +17,11 @@ OUTPUT_VIDEO = "temp/final_reel.mp4"
 MUSIC_FILE = "temp/music.mp3"
 FONT_PATH = "fonts/Inter-Bold.ttf"
 
-# === Style Settings ===
+# === Style ===
 FONT_SIZE = 52
 TEXT_COLOR = "white"
 STROKE_COLOR = "black"
-STROKE_WIDTH = 2
+STROKE_WIDTH = 3
 CAPTION_WIDTH_RATIO = 0.9
 CAPTION_FADE_DURATION = 0.3
 CAPTION_CENTER_HEIGHT = 0.55
@@ -56,7 +56,8 @@ def create_caption_clip(text, start, duration, video_size):
         size=(int(video_size[0] * CAPTION_WIDTH_RATIO), None)
     )
     y = int(video_size[1] * CAPTION_CENTER_HEIGHT) - caption.h // 2
-    caption = caption.set_position(("center", y)).set_start(start).set_duration(duration)
+    caption = caption.set_position(lambda t: ("center", y + 20 - 20 * min(t / 0.4, 1)))
+    caption = caption.set_start(start).set_duration(duration)
     caption = fadein.fadein(caption, CAPTION_FADE_DURATION)
     caption = fadeout.fadeout(caption, CAPTION_FADE_DURATION)
     return caption
@@ -71,12 +72,6 @@ def create_progress_bar(duration, video_size):
 def create_gradient_overlay(video_size, duration):
     gradient = ColorClip(size=video_size, color=(0, 0, 0)).set_opacity(GRADIENT_OPACITY)
     return gradient.set_duration(duration)
-
-
-def loop_clip_to_duration(clip, target_duration):
-    loops_needed = int(target_duration // clip.duration) + 1
-    clips = [clip] * loops_needed
-    return concatenate_videoclips(clips).subclip(0, target_duration)
 
 
 def generate_all_layers(metadata, video_size, total_duration):
@@ -95,7 +90,7 @@ def generate_all_layers(metadata, video_size, total_duration):
 
 
 def render_video():
-    print("🎬 Rendering FINAL v10 — Loop bg/music + clean captions...")
+    print("🎬 Rendering FINAL v11 — Slide-up captions, looping background/music...")
 
     if not os.path.exists(INPUT_VIDEO):
         raise FileNotFoundError("❌ Background video missing.")
@@ -107,14 +102,18 @@ def render_video():
     voiceover = AudioFileClip(VOICEOVER_FILE)
     caption_metadata = load_metadata(CAPTIONS_METADATA)
 
-    # 🔁 Background video loop
+    # 🔁 Loop & zoom video
     bg_clip = VideoFileClip(INPUT_VIDEO)
     if bg_clip.duration < voiceover.duration:
         print("🔁 Looping background video...")
-        bg_clip = loop_clip_to_duration(bg_clip, voiceover.duration)
+        loops_needed = int(voiceover.duration // bg_clip.duration) + 1
+        clips = [bg_clip] * loops_needed
+        bg_clip = concatenate_videoclips(clips).subclip(0, voiceover.duration)
+    bg_clip = bg_clip.fx(vfx.crop, x_center=bg_clip.w/2, width=bg_clip.w*0.95)
+    bg_clip = bg_clip.fx(vfx.resize, height=1080)
     bg_clip = bg_clip.set_duration(voiceover.duration)
 
-    # 🔁 Background music loop
+    # 🔁 Loop background music
     if os.path.exists(MUSIC_FILE):
         print("🎵 Adding looping music...")
         music_clip = AudioFileClip(MUSIC_FILE).volumex(0.15)
