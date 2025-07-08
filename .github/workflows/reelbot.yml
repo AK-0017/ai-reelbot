@@ -62,6 +62,9 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          
+      - name: 🧩 Install Playwright Browsers
+        run: python -m playwright install --with-deps
 
       - name: 🤖 Upload Reel to Instagram (Dry Run)
         run: python uploader.py
