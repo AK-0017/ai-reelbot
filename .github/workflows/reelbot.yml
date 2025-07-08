@@ -2,6 +2,8 @@ name: 🧪 Test - The WorkFlow - InstaBot
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 11 * * *'  # ⏰ 16:30 IST daily
 
 jobs:
   WorkFlow-InstaBot:
