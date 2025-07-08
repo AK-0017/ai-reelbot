@@ -29,6 +29,9 @@ jobs:
       - name: 🛡️ Patch ImageMagick policy
         run: |
           sudo sed -i 's/rights="none"/rights="read|write"/g' /etc/ImageMagick-6/policy.xml || true
+          
+      - name: 📰 Fetch news, generate scripts, upload to Supabase
+        run: python main.py
 
       - name: 🧾 Fetch latest script from Supabase
         run: |
